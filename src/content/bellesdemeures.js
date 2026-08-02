@@ -1,41 +1,45 @@
 (function () {
-  "use strict";
+  'use strict';
 
   const ex = window.__chhExtract;
   const ui = window.__chhOverlay;
 
-  const _intervals = [];
-  function registerInterval(fn, ms) {
-    const id = setInterval(fn, ms);
-    _intervals.push(id);
-    return id;
-  }
-  function clearAllIntervals() {
-    _intervals.forEach((id) => clearInterval(id));
-    _intervals.length = 0;
-  }
-
-  const checkingIds = new Set();
-  
-  let notionMatch = null;
+  const STATE = { injectedFor: null };
   let notionCheckInFlight = false;
   let notionCheckDone = false;
-  let STATE = { injectedFor: null };
+  let notionMatch = null;
+  let activeIntervals = [];
+  const checkingIds = new Set();
 
-  function isAdPage() {
-    return /\/annonces\/|\/locations\//i.test(location.href);
+  function extractListingId(href) {
+    if (!href) return null;
+    const match = href.match(/\b\d{7,12}\b/);
+    return match ? match[0] : null;
   }
 
   function isDetailLink(href) {
     if (!href) return false;
-    return /seloger\.com\/annonces\/|seloger\.com\/locations\/|bellesdemeures\.com\/annonces\//i.test(href);
+    const cleanUrl = href.split('?')[0].split('#')[0];
+    if (cleanUrl.includes('/annonces/') && /\b\d{7,12}\b/.test(cleanUrl)) {
+      return true;
+    }
+    return false;
   }
 
-  function extractListingId(val) {
-    if (!val) return null;
-    const m1 = val.match(/\/([0-9]{6,12})(?:\/|\?|$)/);
-    if (m1) return m1[1];
-    return null;
+  function registerInterval(fn, delay) {
+    const id = setInterval(fn, delay);
+    activeIntervals.push(id);
+    return id;
+  }
+
+  function clearAllIntervals() {
+    activeIntervals.forEach(clearInterval);
+    activeIntervals = [];
+  }
+
+  function isAdPage() {
+    const path = window.location.pathname;
+    return path.includes('/annonces/') && /\b\d{7,12}\b/.test(path);
   }
 
   function findPriceInJson(obj) {
@@ -64,10 +68,6 @@
         const p = findPriceInJson(obj.sections.financial);
         if (p) return p;
       }
-      if (obj.sections.pricing && typeof obj.sections.pricing === 'object') {
-        const p = findPriceInJson(obj.sections.pricing);
-        if (p) return p;
-      }
     }
 
     // General recursive fallback
@@ -82,75 +82,27 @@
     return null;
   }
 
-  function tryExtractClassified() {
-    // 1. UFRN
-    const node = document.getElementById("__UFRN_LIFECYCLE_SERVERREQUEST__");
+  function readLifecycleData() {
+    // 1. Try __UFRN_LIFECYCLE_SERVERREQUEST__ first (SeLoger legacy format)
+    const node = document.getElementById('__UFRN_LIFECYCLE_SERVERREQUEST__');
     if (node && node.textContent) {
       const m = node.textContent.match(/JSON\.parse\((".*")\)/s);
       if (m) {
         try {
           const inner = JSON.parse(m[1]);
-          const parsed = JSON.parse(inner);
-          for (const key of Object.keys(parsed)) {
-            const app = parsed[key];
-            if (app?.data?.classified) return app.data.classified;
-          }
-        } catch {}
-      }
-    }
-    
-    // 2. Next.js / Apollo
-    let nextData = null;
-    const nextNode = document.getElementById('__NEXT_DATA__');
-    if (nextNode && nextNode.textContent) {
-      try { nextData = JSON.parse(nextNode.textContent); } catch {}
-    }
-    const apolloState = nextData?.props?.pageProps?.initialApolloState || window.__APOLLO_STATE__ || window.apolloState || window.__NEXT_DATA__?.props?.pageProps?.initialApolloState;
-    
-    if (apolloState) {
-      let classifiedRef = null;
-      const listingId = extractListingId(location.href);
-      if (listingId && apolloState[`Classified:${listingId}`]) {
-        classifiedRef = apolloState[`Classified:${listingId}`];
-      } else {
-        for (const key of Object.keys(apolloState)) {
-          if (key.startsWith('Classified:')) {
-            classifiedRef = apolloState[key];
-            break;
-          }
+          return JSON.parse(inner);
+        } catch (err) {
         }
       }
-      
-      if (classifiedRef) {
-        const deref = (obj, seen = new Set()) => {
-          if (!obj) return obj;
-          if (typeof obj !== 'object') return obj;
-          if (obj.__ref) {
-            if (seen.has(obj.__ref)) return null;
-            const newSeen = new Set(seen);
-            newSeen.add(obj.__ref);
-            return deref(apolloState[obj.__ref], newSeen);
-          }
-          if (Array.isArray(obj)) return obj.map(v => deref(v, seen));
-          const res = {};
-          for (const [k, v] of Object.entries(obj)) res[k] = deref(v, seen);
-          return res;
-        };
-        return deref(classifiedRef);
+    }
+    // 2. Try __NEXT_DATA__ (Next.js format)
+    const nextNode = document.getElementById('__NEXT_DATA__');
+    if (nextNode && nextNode.textContent) {
+      try {
+        return JSON.parse(nextNode.textContent);
+      } catch (err) {
       }
     }
-    
-    // 3. Fallback generic search
-    let state = nextData || window.__INITIAL_STATE__ || window.__PRELOADED_STATE__;
-    if (state) {
-      return ex.deepFind(state, n => 
-        n && typeof n === 'object' && 
-        (n.rawData || n.sections) && 
-        (n.id || n.reference) && 
-        ((n.sections && n.sections.location) || (n.rawData && n.rawData.propertyType))
-      );
-    }
-    
     return null;
   }
 
@@ -216,6 +168,21 @@
     return null;
   }
 
+  function findClassified(lifecycle) {
+    if (!lifecycle) return null;
+    // SeLoger style
+    for (const key of Object.keys(lifecycle)) {
+      const app = lifecycle[key];
+      const c = app?.data?.classified;
+      if (c) return c;
+    }
+    // NextProps search / General fallback
+    return ex.deepFind(
+      lifecycle,
+      (n) => n && typeof n === 'object' && 'sections' in n && 'rawData' in n
+    );
+  }
+
   function extractDescriptionFromSection(descData) {
     if (!descData) return '';
     if (typeof descData === 'string') return descData.trim();
@@ -268,28 +235,26 @@
     if (!classified) return null;
 
     if (classified.id) {
-      const match = location.pathname.match(/\/annonces\/[^/]+\/[^/]+\/[^/]+\/(\d{5,})\//i) || location.pathname.match(/\b(\d{5,})\b/);
+      const match = location.pathname.match(/\b(\d{7,12})\b/);
       if (match && match[1] && String(classified.id) !== match[1]) {
         return null;
       }
     }
 
     const sections = classified.sections || {};
-    const address = sections.location?.address || classified.location?.address || classified.address || {};
-    const postal = ex.normalizePostal(address.zipCode || address.postalCode);
-    const city = address.city || address.locality || null;
-    const rawType = classified.rawData?.propertyType || classified.propertyType || "";
-    const hardTitle = sections.hardFacts?.title || "";
+    const address = sections.location?.address || {};
+    const postal = ex.normalizePostal(address.zipCode);
+    const city = address.city || null;
+    const rawType = classified.rawData?.propertyType || '';
+    const hardTitle = sections.hardFacts?.title || '';
     const price = findPriceInJson(classified);
 
-    const facts = sections.hardFacts?.facts || classified.hardFacts?.facts || [];
+    const facts = sections.hardFacts?.facts || [];
     let landSpace = null;
     let livingSpace = null;
     for (const f of facts) {
-      if (f.type === "landSpace")
-        landSpace = ex.normalizeLandSurface(f.splitValue || f.value);
-      else if (f.type === "livingSpace")
-        livingSpace = ex.normalizeSurface(f.splitValue || f.value);
+      if (f.type === 'landSpace') landSpace = ex.normalizeLandSurface(f.splitValue || f.value);
+      else if (f.type === 'livingSpace') livingSpace = ex.normalizeSurface(f.splitValue || f.value);
     }
 
     const isLand = /terrain/i.test(rawType) || /terrain/i.test(hardTitle);
@@ -299,19 +264,18 @@
         extractDescriptionFromSection(sections.description) ||
         extractDescriptionFromSection(classified.rawData?.description) ||
         extractDescriptionFromSection(classified.description) ||
-        "";
-      const surface =
-        landSpace != null ? landSpace : ex.normalizeLandSurface(livingSpace);
+        '';
+      const surface = landSpace != null ? landSpace : ex.normalizeLandSurface(livingSpace);
       const section = ex.normalizeSection(description);
       return {
-        kind: "land",
+        kind: 'land',
         postal,
         city,
         surface,
         price,
         section,
         description,
-        source: "seloger-json",
+        source: 'bellesdemeures-json',
       };
     }
 
@@ -319,40 +283,37 @@
 
     let energyClass = null;
     let gesClass = null;
-    const certs = sections.energy?.certificates || classified.energy?.certificates || [];
+    const certs = sections.energy?.certificates || [];
     for (const cert of certs) {
       for (const scale of cert.scales || []) {
         const rating = scale.efficiencyClass?.rating;
         if (!rating) continue;
-        const type = String(scale.type || "").toUpperCase();
-        if (type.includes("GHG") || type.includes("GES")) {
+        const type = String(scale.type || '').toUpperCase();
+        if (type.includes('GHG') || type.includes('GES')) {
           gesClass = gesClass || ex.normalizeClass(rating);
-        } else if (type.includes("ENERGY") || type.includes("DPE")) {
+        } else if (type.includes('ENERGY') || type.includes('DPE')) {
           energyClass = energyClass || ex.normalizeClass(rating);
         }
       }
     }
 
     let buildingType = null;
-    if (/maison|house/i.test(rawType) || /maison/i.test(hardTitle))
-      buildingType = "maison";
-    else if (/appart|flat/i.test(rawType) || /appart/i.test(hardTitle))
-      buildingType = "appartement";
+    if (/maison|house/i.test(rawType) || /maison/i.test(hardTitle)) buildingType = 'maison';
+    else if (/appart|flat/i.test(rawType) || /appart/i.test(hardTitle)) buildingType = 'appartement';
 
     const description = 
       extractDescriptionFromSection(sections.description) ||
       extractDescriptionFromSection(classified.rawData?.description) ||
       extractDescriptionFromSection(classified.description) ||
-      "";
+      '';
     const dateParsed = ex.extractDateFromText(description);
     const dateRange = ex.parseDateRange(dateParsed);
-    const isNewBuild =
-      classified.metadata?.isNewBuildProject === true ||
-      /neuf|vefa/i.test(description);
+    const isNewBuild = classified.metadata?.isNewBuildProject === true || /neuf|vefa/i.test(description);
 
     const title = hardTitle || document.querySelector('h1')?.textContent || document.title || '';
-    const imageUrl = sections.photos?.photos?.[0]?.url || classified.photos?.photos?.[0]?.url || document.querySelector('img[src*="seloger"]')?.src || null;
-    
+    const imageUrl = sections.photos?.photos?.[0]?.url ||
+      document.querySelector('meta[property="og:image"]')?.getAttribute('content') || null;
+
     let rooms = null;
     let bedrooms = null;
 
@@ -396,44 +357,37 @@
       if (bedM) bedrooms = parseInt(bedM[1], 10) || null;
     }
 
-    const url = location.href;
-    const siteName = 'SeLoger';
-
     return {
-      kind: "dpe",
+      kind: 'dpe',
       title,
-      url,
-      siteName,
+      url: location.href,
+      siteName: 'BellesDemeures',
       imageUrl,
       rooms,
       bedrooms,
       description,
-      landSurface: landSpace,
       postal,
       city,
       surface,
       price,
+      landSurface: landSpace,
       energyClass,
       gesClass,
       buildingType,
       dateRange,
       isNewBuild,
-      source: "seloger-json",
+      source: 'bellesdemeures-json',
     };
   }
 
   function extractFromDom() {
-    const title = document.title || "";
+    const title = document.title || '';
     const metaDesc =
-      document
-        .querySelector('meta[name="description"]')
-        ?.getAttribute("content") ||
-      document
-        .querySelector('meta[property="og:description"]')
-        ?.getAttribute("content") ||
-      "";
-    const h1Text = document.querySelector('h1')?.textContent || "";
-    const bodyText = document.body.innerText || "";
+      document.querySelector('meta[name="description"]')?.getAttribute('content') ||
+      document.querySelector('meta[property="og:description"]')?.getAttribute('content') ||
+      '';
+    const h1Text = document.querySelector('h1')?.textContent || '';
+    const bodyText = document.body.innerText || '';
     const sources = [h1Text, title, metaDesc, bodyText];
 
     let postal = null;
@@ -446,9 +400,7 @@
       }
     }
     for (const text of sources) {
-      const m =
-        text.match(/\(?(\d{5})\)?\s*$/) ||
-        text.match(/\b\d{5}\s+([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ\-' ]{1,40})/);
+      const m = text.match(/\?(\d{5})\)?\s*$/) || text.match(/\b\d{5}\s+([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ\-' ]{1,40})/);
       if (m && m[1] && /[A-Za-z]/.test(m[1])) {
         city = m[1].trim();
         break;
@@ -461,21 +413,9 @@
       /\bterrain[s]?\b/i.test(metaDesc);
 
     let price = null;
-    let maxPrice = 0;
-    const elements = document.querySelectorAll('span, div, p, h1, h2, strong, b');
-    for (const el of elements) {
-      const text = (el.textContent || '').trim();
-      if (text.length > 50) continue;
-      const m = text.match(/(\d[\d \t\u202f\u00a0]*)\s*€/);
-      if (m) {
-        const val = parseInt(m[1].replace(/[ \t\u202f\u00a0]/g, ''), 10);
-        if (val > 5000 && val < 100000000) {
-          if (val > maxPrice) maxPrice = val;
-        }
-      }
-    }
-    if (maxPrice > 0) {
-      price = maxPrice;
+    const priceM = bodyText.match(/(\d[\d \t\u202f\u00a0]*)\s*€/);
+    if (priceM) {
+      price = parseInt(priceM[1].replace(/[ \t\u202f\u00a0]/g, ''), 10);
     }
 
     // Extract Description from DOM
@@ -543,68 +483,62 @@
 
     if (isLand) {
       let landSurface = null;
-      for (const text of sources) {
-        const m = text.match(/(\d{1,6})\s*m(?:²|2)\b/i);
-        if (m) {
-          landSurface = ex.normalizeLandSurface(m[1]);
-          if (landSurface) break;
-        }
+      const landM = bodyText.match(/(\d[\d \t\u202f\u00a0]*)\s*(?:m(?:²|2)|mètres?\s*carrés?|etres?\s*carres?)\s*(?:de\s*)?terrain/i);
+      if (landM) {
+        landSurface = ex.normalizeLandSurface(landM[1]);
       }
       const section = ex.normalizeSection(bodyText);
-      if (!landSurface || !postal) return null;
       return {
-        kind: "land",
+        kind: 'land',
         postal,
         city,
         surface: landSurface,
         price,
         section,
         description,
-        source: "seloger-dom",
+        source: 'bellesdemeures-dom',
       };
     }
 
     let surface = null;
-    for (const text of sources) {
-      const m = text.match(/(\d{1,4})\s*m(?:²|2)\b/i);
-      if (m) {
-        surface = ex.normalizeSurface(m[1]);
-        if (surface) break;
-      }
+    const surfaceM = bodyText.match(/(\d[\d \t\u202f\u00a0]*)\s*(?:m(?:²|2)|mètres?\s*carrés?|etres?\s*carres?)(?!\d)/i);
+    if (surfaceM) {
+      surface = ex.normalizeSurface(surfaceM[1]);
     }
 
+    // Energy / GES estimation
+    let energyClass = null;
+    let gesClass = null;
+
+    const energyBadge = document.querySelector('[class*="energyClassification"], [class*="dpe"]');
+    if (energyBadge && energyBadge.textContent) {
+      energyClass = ex.normalizeClass(energyBadge.textContent);
+    }
+    const gesBadge = document.querySelector('[class*="greenhouseGasEmissionClassification"], [class*="ges"]');
+    if (gesBadge && gesBadge.textContent) {
+      gesClass = ex.normalizeClass(gesBadge.textContent);
+    }
+
+    const energyMatch = bodyText.match(/\bDPE\s*:\s*([A-G])\b/i) || bodyText.match(/classe\s+énergie\s+([A-G])\b/i);
+    if (energyMatch) energyClass = energyClass || energyMatch[1].toUpperCase();
+
+    const gesMatch = bodyText.match(/\bGES\s*:\s*([A-G])\b/i) || bodyText.match(/classe\s+climat\s+([A-G])\b/i);
+    if (gesMatch) gesClass = gesClass || gesMatch[1].toUpperCase();
+
     let buildingType = null;
-    if (/maison/i.test(title)) buildingType = "maison";
-    else if (/appart/i.test(title)) buildingType = "appartement";
+    if (/maison|villa|propriété|manoir|château/i.test(title)) buildingType = 'maison';
+    else if (/appartement/i.test(title)) buildingType = 'appartement';
 
     const dateParsed = ex.extractDateFromText(bodyText);
     const dateRange = ex.parseDateRange(dateParsed);
-    const isNewBuild = /neuf|vefa|programme\s+neuf/i.test(bodyText);
+    const isNewBuild = /neuf|vefa/i.test(title) || /neuf|vefa/i.test(bodyText);
 
-    let energyClass = null;
-    let gesClass = null;
-    const allTxt = document.body.innerText || '';
-    const dpeM = allTxt.match(/\bDPE\s*[\n\r:]*\s*([A-G])\b/i) || allTxt.match(/Classe (?:énergie|énergétique)\s*[\n\r:]*\s*([A-G])\b/i);
-    if (dpeM) energyClass = ex.normalizeClass(dpeM[1]);
-    const gesM = allTxt.match(/\bGES\s*[\n\r:]*\s*([A-G])\b/i) || allTxt.match(/(?:Emission|Classe)[\s\S]{0,20}?gaz[\s\S]{0,20}?([A-G])\b/i);
-    if (gesM) gesClass = ex.normalizeClass(gesM[1]);
-    
-    if (!rooms) {
-      const rm = allTxt.match(/\b(\d+)\s*pièces?\b/i);
-      if (rm) rooms = parseInt(rm[1], 10);
-    }
-    if (!bedrooms) {
-      const bm = allTxt.match(/\b(\d+)\s*chambres?\b/i);
-      if (bm) bedrooms = parseInt(bm[1], 10);
-    }
-
-    if (!surface || !postal) return null;
     return {
-      kind: "dpe",
+      kind: 'dpe',
       title: document.title || '',
       url: location.href,
-      siteName: 'SeLoger',
-      imageUrl: document.querySelector('img[src*="seloger"]')?.src || null,
+      siteName: 'BellesDemeures',
+      imageUrl: document.querySelector('meta[property="og:image"]')?.getAttribute('content') || null,
       description,
       rooms,
       bedrooms,
@@ -617,18 +551,19 @@
       buildingType,
       dateRange,
       isNewBuild,
-      source: "seloger-dom",
+      source: 'bellesdemeures-dom',
     };
   }
 
   function tryExtract() {
-    const classified = tryExtractClassified();
+    const lifecycle = readLifecycleData();
+    const classified = findClassified(lifecycle);
     let payload = extractFromClassified(classified);
     const jsonLd = extractFromJsonLd();
     if (jsonLd) {
       payload = mergePayloads(payload, jsonLd);
     }
-    if (!payload || (!payload.surface && !payload.price) || !payload.postal || !payload.rooms || !payload.description || !payload.energyClass || !payload.gesClass) {
+    if (!payload || !payload.surface || !payload.postal || !payload.price || !payload.rooms || !payload.description) {
       const fallback = extractFromDom();
       if (fallback) payload = mergePayloads(payload, fallback);
     }
@@ -641,44 +576,63 @@
     return payload;
   }
 
+  async function runLookup(payload) {
+    try {
+      const response = await chrome.runtime.sendMessage({ type: 'LOOKUP', payload });
+      if (!response || response.ok !== true) {
+        ui.showError(response?.error || 'Erreur inconnue', payload);
+        return;
+      }
+      if (payload.kind === 'land' || response.result?.kind === 'land') {
+        ui.showLandResult(payload, response.result, () => openOverride(payload));
+      } else {
+        ui.showResult(payload, response.result, () => openOverride(payload));
+      }
+    } catch (err) {
+      ui.showError(String(err.message || err), payload);
+    }
+  }
+
+  function openOverride(payload) {
+    try {
+      chrome.runtime.sendMessage({ type: 'OPEN_POPUP', payload }).catch(() => {});
+    } catch {}
+  }
+
+
+
+
   function findCardContainer(linkEl) {
     let current = linkEl;
     while (current.parentElement) {
       const parent = current.parentElement;
-      if (parent.tagName === "BODY" || parent.tagName === "HTML") {
+      if (parent.tagName === 'BODY' || parent.tagName === 'HTML') {
         break;
       }
 
-      const isCardBlock =
-        parent.getAttribute("data-testid") === "map-card-testid" ||
-        parent.getAttribute("data-testid") === "map-card" ||
-        parent.getAttribute("data-test") === "sl.listing.card" ||
-        parent.getAttribute("data-test") === "sl.search.card";
-
-      if (isCardBlock && parent !== linkEl) {
-        return parent;
+      if (parent.getAttribute('data-testid') === 'map-card-testid' ||
+          parent.getAttribute('data-testid') === 'map-card' ||
+          parent.classList.contains('leaflet-popup') ||
+          parent.classList.contains('leaflet-popup-content-wrapper') ||
+          parent.classList.contains('mapboxgl-popup') ||
+          parent.classList.contains('mapboxgl-popup-content') ||
+          parent.classList.contains('gm-style-iw') ||
+          parent.classList.contains('gm-style-iw-c') ||
+          /popup/i.test(parent.className || '')) {
+        current = parent;
+        break;
       }
-
-      const siblingLinks = parent.querySelectorAll(
-        "a, [data-href], [data-url], [data-id]",
-      );
+      
+      const siblings = parent.querySelectorAll('a, [data-href], [data-url], [data-id]');
       const uniqueIds = new Set();
-      for (const sibling of siblingLinks) {
-        const val =
-          sibling.getAttribute("href") ||
-          sibling.getAttribute("data-href") ||
-          sibling.getAttribute("data-url") ||
-          sibling.getAttribute("data-id") ||
-          "";
+      for (const el of siblings) {
+        const val = el.getAttribute('href') || el.getAttribute('data-href') || el.getAttribute('data-url') || el.getAttribute('data-id') || '';
         const elId = extractListingId(val);
         if (elId) {
           uniqueIds.add(elId);
         }
       }
-      
-      const mainImages = parent.querySelectorAll('[aria-label*="Image principale" i]');
-      
-      if (uniqueIds.size > 1 || mainImages.length > 1) {
+      if (uniqueIds.size > 1) {
         break;
       }
       current = parent;
@@ -686,28 +640,21 @@
     return current;
   }
 
-  function extractDetailsFromCard(cardEl, href = "") {
-    const text = (cardEl.innerText || cardEl.textContent || "").trim();
-
+  function extractDetailsFromCard(cardEl, href = '') {
+    const text = (cardEl.innerText || cardEl.textContent || '').trim();
+    
     // Extract price
     let price = null;
-    let maxPrice = 0;
-    const priceMatches = Array.from(
-      text.matchAll(/(\d[\d \t\u202f\u00a0]*)\s*€/g),
-    );
-    for (const m of priceMatches) {
-      const val = parseInt(m[1].replace(/[ \t\u202f\u00a0]/g, ""), 10);
-      if (val > maxPrice) maxPrice = val;
+    const priceM = text.match(/(\d[\d \t\u202f\u00a0]*)\s*€/);
+    if (priceM) {
+      price = parseInt(priceM[1].replace(/[ \t\u202f\u00a0]/g, ''), 10);
     }
-    if (maxPrice > 0) price = maxPrice;
 
     // Extract surface
     let surface = null;
-    const surfaceM = text.match(
-      /(\d[\d \t\u202f\u00a0]*)\s*(?:m(?:²|2)|mètres?\s*carrés?|etres?\s*carres?)(?!\d)/i,
-    );
+    const surfaceM = text.match(/(\d[\d \t\u202f\u00a0]*)\s*(?:m(?:²|2)|mètres?\s*carrés?|etres?\s*carres?)(?!\d)/i);
     if (surfaceM) {
-      surface = parseFloat(surfaceM[1].replace(/[ \t\u202f\u00a0]/g, ""));
+      surface = parseFloat(surfaceM[1].replace(/[ \t\u202f\u00a0]/g, ''));
     }
 
     // Extract postal/city from text
@@ -729,15 +676,13 @@
       const urlMatch = href.match(/\/annonces\/[^/]+\/[^/]+\/([^/]+)\//i);
       if (urlMatch) {
         const slug = urlMatch[1];
-        const slugParts = slug.split("-");
+        const slugParts = slug.split('-');
         const last = slugParts[slugParts.length - 1];
         if (/^\d{5}$/.test(last)) {
           postal = postal || last;
         }
-        const cityParts = slugParts.filter(
-          (p) => !/^\d+$/.test(p) && !/^eme$/i.test(p) && !/^er$/i.test(p),
-        );
-        city = cityParts.join(" ").trim();
+        const cityParts = slugParts.filter(p => !/^\d+$/.test(p) && !/^eme$/i.test(p) && !/^er$/i.test(p));
+        city = cityParts.join(' ').trim();
       }
     }
 
@@ -745,66 +690,25 @@
   }
 
   async function processListingCards() {
-    // 1. Existing cards check
-    const elements = document.querySelectorAll(
-      'a, [data-href], [data-url], [data-id], [data-testid="map-card-testid"], [data-testid="map-card"], [data-test="sl.listing.card"], [data-test="sl.search.card"], [aria-label*="Image principale" i]',
-    );
-
+    // 1. Existing cards check (standard list view / generic elements)
+    const elements = document.querySelectorAll('a, [data-href], [data-url], [data-id]');
     for (const el of elements) {
-      const isMainImage =
-        el.getAttribute("aria-label") &&
-        /Image principale/i.test(el.getAttribute("aria-label"));
-      const isKnownCard =
-        isMainImage ||
-        el.getAttribute("data-testid") === "map-card-testid" ||
-        el.getAttribute("data-testid") === "map-card" ||
-        el.getAttribute("data-test") === "sl.listing.card" ||
-        el.getAttribute("data-test") === "sl.search.card";
-
-      const val =
-        el.getAttribute("href") ||
-        el.getAttribute("data-href") ||
-        el.getAttribute("data-url") ||
-        el.getAttribute("data-id") ||
-        "";
-
-      if (!isKnownCard && !isDetailLink(val)) {
+      const val = el.getAttribute('href') || el.getAttribute('data-href') || el.getAttribute('data-url') || el.getAttribute('data-id') || '';
+      if (!isDetailLink(val)) {
         continue;
       }
 
-      let cardEl = isKnownCard && !isMainImage ? el : findCardContainer(el);
+      const cleanVal = val.split('?')[0].split('#')[0];
+      if (el.dataset.chhProcessed === cleanVal) continue;
 
-      let id = extractListingId(val);
-      if (!id) {
-        const innerLink = cardEl.querySelector(
-          "a, [data-href], [data-url], [data-id]",
-        );
-        if (innerLink) {
-          const innerVal =
-            innerLink.getAttribute("href") ||
-            innerLink.getAttribute("data-href") ||
-            innerLink.getAttribute("data-url") ||
-            innerLink.getAttribute("data-id") ||
-            "";
-          id = extractListingId(innerVal);
-        }
-        if (!id) {
-          id = "card-" + (cardEl.innerText || "").slice(0, 30).replace(/\s/g, "");
-        }
-      }
+      const id = extractListingId(val);
+      if (!id) continue;
 
-      if (cardEl.dataset.chhProcessed === id) {
-        if (cardEl.dataset.chhMatchUrl && !cardEl.querySelector(".chh-card-chh-badge")) {
-          ui.markCardAsMatched(cardEl, { url: cardEl.dataset.chhMatchUrl });
-        }
-        continue;
-      }
-      if (checkingIds.has(id)) {
-        continue;
-      }
+      if (checkingIds.has(id)) continue;
 
-      if (cardEl.querySelector(".chh-card-chh-badge")) {
-        cardEl.dataset.chhProcessed = id;
+      let cardEl = findCardContainer(el);
+      if (cardEl.querySelector('.chh-card-chh-badge')) {
+        el.dataset.chhProcessed = cleanVal;
         continue;
       }
 
@@ -812,35 +716,21 @@
 
       let attempts = 0;
       let current = cardEl;
-      while (
-        !isKnownCard &&
-        (!details.price || !details.surface) &&
-        current.parentElement &&
-        attempts < 3
-      ) {
+      while ((!details.price || !details.surface) && current.parentElement && attempts < 3) {
         const parent = current.parentElement;
-        if (parent.tagName === "BODY" || parent.tagName === "HTML") {
+        if (parent.tagName === 'BODY' || parent.tagName === 'HTML') {
           break;
         }
-        const siblingLinks = parent.querySelectorAll(
-          "a, [data-href], [data-url], [data-id]",
-        );
+        const siblingLinks = parent.querySelectorAll('a, [data-href], [data-url], [data-id]');
         const uniqueIds = new Set();
         for (const sibling of siblingLinks) {
-          const siblingVal =
-            sibling.getAttribute("href") ||
-            sibling.getAttribute("data-href") ||
-            sibling.getAttribute("data-url") ||
-            sibling.getAttribute("data-id") ||
-            "";
+          const siblingVal = sibling.getAttribute('href') || sibling.getAttribute('data-href') || sibling.getAttribute('data-url') || sibling.getAttribute('data-id') || '';
           const siblingId = extractListingId(siblingVal);
           if (siblingId) {
             uniqueIds.add(siblingId);
           }
         }
-        
-        const mainImages = parent.querySelectorAll('[aria-label*="Image principale" i]');
-        if (uniqueIds.size > 1 || mainImages.length > 1) {
+        if (uniqueIds.size > 1) {
           break;
         }
 
@@ -853,96 +743,74 @@
         attempts++;
       }
 
-      if (ui.checkAndMarkExcluded(cardEl, (details?.title || "") + " " + (details?.city || ""))) {
-        cardEl.dataset.chhProcessed = id;
+      if (ui.checkAndMarkExcluded(cardEl, (details?.title || "") + " " + (details?.city || "") + " " + val)) {
+        el.dataset.chhProcessed = cleanVal;
         continue;
       }
 
-      const hasEnoughData =
-        (details.postal && (details.surface || details.price)) ||
-        (details.surface && details.price);
-        
+      // Check if we have enough details to identify the property in Notion
+      const hasEnoughData = (details.postal && (details.surface || details.price)) || (details.surface && details.price);
       if (!hasEnoughData) {
         continue;
       }
 
-      cardEl.dataset.chhProcessed = id;
+      el.dataset.chhProcessed = cleanVal;
       checkingIds.add(id);
 
       try {
-        const response = await chrome.runtime.sendMessage({
-          type: "CHECK_NOTION",
-          payload: { ...details },
+        const response = await chrome.runtime.sendMessage({ 
+          type: 'CHECK_NOTION', 
+          payload: details 
         });
-        if (
-          response &&
-          response.ok &&
-          response.result &&
-          response.result.match
-        ) {
-          cardEl.dataset.chhMatchUrl = response.result.match.url;
+        if (response && response.ok && response.result && response.result.match) {
           ui.markCardAsMatched(cardEl, response.result.match);
         }
       } catch (err) {
+        // ignore
       } finally {
         checkingIds.delete(id);
       }
     }
 
-    // 2. Map popup check
-    const mapPopups = document.querySelectorAll(
-      '.leaflet-popup-content-wrapper, .leaflet-popup, .mapboxgl-popup-content, .gm-style-iw, .gm-style-iw-c, [class*="map-popup" i], [class*="MapPopup" i]',
-    );
+    // 2. Map popup check (for map views if any)
+    const mapPopups = document.querySelectorAll('.leaflet-popup-content-wrapper, .leaflet-popup, .mapboxgl-popup-content, .gm-style-iw, .gm-style-iw-c, [class*="map-popup" i], [class*="MapPopup" i]');
     for (const popup of mapPopups) {
-      if (popup.querySelector(".chh-card-chh-badge")) continue;
-
-      let details = extractDetailsFromCard(popup);
-      if (ui.checkAndMarkExcluded(popup, (details?.title || "") + " " + (details?.city || ""), true)) {
-        continue;
-      }
-
-      const hasEnoughData =
-        (details.postal && (details.surface || details.price)) ||
-        (details.surface && details.price);
-      if (!hasEnoughData) continue;
-
-      const link = popup.matches("a, [data-href], [data-url], [data-id]")
-        ? popup
-        : popup.querySelector("a, [data-href], [data-url], [data-id]");
-      let id = null;
+      if (popup.querySelector('.chh-card-chh-badge')) continue;
+      
+      const link = popup.matches('a, [data-href], [data-url], [data-id]') ? popup : popup.querySelector('a, [data-href], [data-url], [data-id]');
       if (link) {
-        const val =
-          link.getAttribute("href") ||
-          link.getAttribute("data-href") ||
-          link.getAttribute("data-url") ||
-          link.getAttribute("data-id") ||
-          "";
-        id = extractListingId(val);
-      }
-      if (!id)
-        id = "popup-" + (popup.innerText || "").slice(0, 30).replace(/\s/g, "");
+        const val = link.getAttribute('href') || link.getAttribute('data-href') || link.getAttribute('data-url') || link.getAttribute('data-id') || '';
+        if (isDetailLink(val)) {
+          const id = extractListingId(val);
+          if (id) {
+            if (checkingIds.has(id)) continue;
 
-      if (checkingIds.has(id)) continue;
-      checkingIds.add(id);
+            let details = extractDetailsFromCard(popup, val);
+            if (ui.checkAndMarkExcluded(popup, (details?.title || "") + " " + (details?.city || ""), true)) {
+              continue;
+            }
 
-      try {
-        const response = await chrome.runtime.sendMessage({
-          type: "CHECK_NOTION",
-          payload: { ...details, forceRefresh: true },
-        });
-        if (
-          response &&
-          response.ok &&
-          response.result &&
-          response.result.match
-        ) {
-          popup.dataset.chhMatchUrl = response.result.match.url;
-          ui.markCardAsMatched(popup, response.result.match, true);
-        } else {
+            const hasEnoughData = (details.postal && (details.surface || details.price)) || (details.surface && details.price);
+            if (!hasEnoughData) {
+              continue;
+            }
+            
+            checkingIds.add(id);
+            try {
+              const response = await chrome.runtime.sendMessage({ 
+                type: 'CHECK_NOTION', 
+                payload: details 
+              });
+              if (response && response.ok && response.result && response.result.match) {
+                ui.markCardAsMatched(popup, response.result.match, true);
+              }
+            } catch (err) {
+              // ignore
+            } finally {
+              checkingIds.delete(id);
+            }
+          }
         }
-      } catch (err) {
-      } finally {
-        checkingIds.delete(id);
       }
     }
   }
@@ -953,43 +821,31 @@
   function runAutoLookup(payload) {
     if (autoLookupDone || autoLookupInFlight) return;
     autoLookupInFlight = true;
-
-    ui.setFloatingContainerLoading("Recherche d'adresse…");
-
-    chrome.runtime.sendMessage({ type: "LOOKUP", payload }, (response) => {
+    
+    ui.setFloatingContainerLoading('Recherche d\'adresse…');
+    
+    chrome.runtime.sendMessage({ type: 'LOOKUP', payload }, (response) => {
       autoLookupInFlight = false;
       autoLookupDone = true;
       if (response && response.ok && response.result) {
-        if (
-          response.result.candidates &&
-          response.result.candidates.length > 0
-        ) {
+        if (response.result.candidates && response.result.candidates.length > 0) {
           const top = response.result.candidates[0];
           if (top.score >= 25) {
-            const isLand =
-              payload.kind === "land" || response.result.kind === "land";
+            const isLand = payload.kind === 'land' || response.result.kind === 'land';
             let addressStr;
             if (isLand) {
-              addressStr =
-                top.parcel.address ||
-                top.parcel.street ||
-                top.parcel.nom_com ||
-                "Parcelle identifiée";
+              addressStr = top.parcel.address || top.parcel.street || top.parcel.nom_com || 'Parcelle identifiée';
             } else {
-              addressStr = top.record.address || "(adresse inconnue)";
+              addressStr = top.record.address || '(adresse inconnue)';
             }
-            if (
-              addressStr &&
-              addressStr !== "(adresse inconnue)" &&
-              addressStr !== "Parcelle identifiée"
-            ) {
+            if (addressStr && addressStr !== '(adresse inconnue)' && addressStr !== 'Parcelle identifiée') {
               ui.setFloatingContainerAddress({
                 address: addressStr,
                 confidence: top.score,
                 dvfPrice: response.result.dvf?.price,
                 dvfDate: response.result.dvf?.date,
                 candidates: response.result.candidates,
-                getPayload: () => payload,
+                getPayload: () => payload
               });
               return;
             }
@@ -1002,20 +858,16 @@
 
   async function checkNotionStatus(payload) {
     if (notionCheckInFlight || notionCheckDone) return;
-    if (
-      !payload ||
-      (!payload.postal && !payload.city) ||
-      (!payload.surface && !payload.price)
-    ) {
+    if (!payload || (!payload.postal && !payload.city) || (!payload.surface && !payload.price)) {
       notionCheckDone = true;
       return;
     }
 
     notionCheckInFlight = true;
     try {
-      const response = await chrome.runtime.sendMessage({
-        type: "CHECK_NOTION",
-        payload: { ...payload, isDetailPage: true },
+      const response = await chrome.runtime.sendMessage({ 
+        type: 'CHECK_NOTION', 
+        payload: { ...payload, isDetailPage: true } 
       });
       if (response && response.ok && response.result) {
         if (response.result.active && response.result.match) {
@@ -1024,88 +876,10 @@
         }
       }
     } catch (err) {
+      // ignore
     } finally {
       notionCheckInFlight = false;
       notionCheckDone = true;
-    }
-  }
-
-  async function runLookup(payload) {
-    try {
-      const response = await chrome.runtime.sendMessage({
-        type: "LOOKUP",
-        payload,
-      });
-      if (!response || response.ok !== true) {
-        ui.showError(response?.error || "Erreur inconnue", payload);
-        return;
-      }
-      if (payload.kind === "land" || response.result?.kind === "land") {
-        ui.showLandResult(payload, response.result, () =>
-          openOverride(payload),
-        );
-      } else {
-        ui.showResult(payload, response.result, () => openOverride(payload));
-      }
-    } catch (err) {
-      ui.showError(String(err.message || err), payload);
-    }
-  }
-
-  function openOverride(payload) {
-    try {
-      sessionStorage.setItem(
-        "chh.override.payload",
-        JSON.stringify(payload),
-      );
-    } catch {}
-    alert(
-      "Ouvrez l’extension (icône dans la barre) pour modifier les champs et relancer la recherche.",
-    );
-  }
-
-  async function onButtonClick() {
-    try {
-      ui.showLoading({
-        postal: null,
-        surface: null,
-        energyClass: null,
-        gesClass: null,
-      });
-      let payload = tryExtract();
-      let attempts = 1;
-      while (
-        (!payload || !payload.surface || !payload.postal) &&
-        attempts < 4
-      ) {
-        await new Promise((r) => setTimeout(r, 350));
-        const next = tryExtract();
-        if (next) payload = { ...(payload || {}), ...next };
-        attempts++;
-      }
-      if (!payload || !payload.surface || !payload.postal) {
-        ui.showError(
-          "Impossible d'extraire les données DPE de cette page. Utilisez l’extension (icône) pour saisir manuellement.",
-          payload,
-        );
-        return;
-      }
-      if (payload.kind === "land") {
-        ui.showLoading(payload);
-        runLookup(payload);
-        return;
-      }
-      if (!payload.dateRange) {
-        ui.showDatePrompt(payload, (updated) => {
-          ui.showLoading(updated);
-          runLookup(updated);
-        });
-        return;
-      }
-      ui.showLoading(payload);
-      runLookup(payload);
-    } catch (err) {
-      ui.showError("Erreur: " + (err.message || String(err)), null);
     }
   }
 
@@ -1133,13 +907,13 @@
     }
 
     if (!payload) {
-      payload = { url: location.href, siteName: 'SeLoger', title: document.title };
-    } else {
-      payload.url = payload.url || location.href;
-      payload.siteName = payload.siteName || 'SeLoger';
-      payload.title = payload.title || document.querySelector('h1')?.textContent || document.title || '';
-      payload.imageUrl = payload.imageUrl || document.querySelector('img[src*="seloger"]')?.src || null;
+      payload = { url: location.href, siteName: 'BellesDemeures', title: document.title };
     }
+
+    ui.setFloatingContainerAddress({
+      address: null,
+      getPayload: () => payload
+    });
 
     let notionMatchLocal = null;
     try {
@@ -1231,8 +1005,8 @@
     }
   }
 
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", init);
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
   } else {
     init();
   }
@@ -1248,7 +1022,6 @@
     clearAllIntervals();
     ui.removeFloatingContainer();
     ui.closeCard();
-    ui.resetFloatingButton();
     setTimeout(init, 200);
   });
 })();

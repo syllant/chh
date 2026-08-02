@@ -2,8 +2,8 @@ const GEO_BASE = 'https://geo.api.gouv.fr';
 const BAN_BASE = 'https://api-adresse.data.gouv.fr';
 const INSEE_TTL_MS = 60 * 60 * 1000;
 const BAN_TTL_MS = 24 * 60 * 60 * 1000;
-const INSEE_STORE_KEY = 'immodex.cache.insee.v1';
-const BAN_STORE_KEY = 'immodex.cache.ban.v1';
+const INSEE_STORE_KEY = 'chh.cache.insee.v1';
+const BAN_STORE_KEY = 'chh.cache.ban.v1';
 
 const inseeMemory = new Map();
 const banMemory = new Map();

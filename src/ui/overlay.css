@@ -1,4 +1,4 @@
-/* ═══ Immodex — Pokédex-style overlay ═══ */
+/* ═══ CHH — Pokédex-style overlay ═══ */
 
 :root {
   --imx-red: #dc2626;
@@ -22,7 +22,7 @@
 }
 
 /* ─── Floating action button — Pokédex-style chip ─── */
-.immodex-btn {
+.chh-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -45,7 +45,7 @@
   padding: 9px 14px;
 }
 
-.immodex-floating-btn {
+.chh-floating-btn {
   position: fixed;
   right: 18px;
   bottom: 18px;
@@ -54,7 +54,7 @@
   z-index: 2147483646;
 }
 
-.immodex-floating-btn::before {
+.chh-floating-btn::before {
   content: '';
   flex-shrink: 0;
   width: 14px;
@@ -67,28 +67,28 @@
     inset 0 -1px 2px rgba(0, 0, 0, 0.5);
 }
 
-.immodex-floating-btn:hover {
+.chh-floating-btn:hover {
   filter: brightness(1.08);
   transform: translateY(-1px);
   box-shadow: 0 4px 0 var(--imx-red-shadow), inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
-.immodex-floating-btn:active {
+.chh-floating-btn:active {
   transform: translateY(2px);
   box-shadow: 0 1px 0 var(--imx-red-shadow), inset 0 1px 0 rgba(255, 255, 255, 0.15);
 }
 
-.immodex-btn:not(.immodex-floating-btn) {
+.chh-btn:not(.chh-floating-btn) {
   margin: 8px 0;
 }
 
-.immodex-btn:disabled {
+.chh-btn:disabled {
   opacity: 0.6;
   cursor: progress;
 }
 
 /* ─── The card — a Pokédex unit ─── */
-.immodex-card {
+.chh-card {
   position: fixed;
   right: 16px;
   bottom: 92px;
@@ -111,12 +111,12 @@
   padding: 0;
 }
 
-.immodex-card * {
+.chh-card * {
   box-sizing: border-box;
 }
 
 /* ─── Header: lens + LEDs + brand ─── */
-.immodex-header {
+.chh-header {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -126,7 +126,7 @@
   position: relative;
 }
 
-.immodex-header::before {
+.chh-header::before {
   content: '';
   flex-shrink: 0;
   width: 38px;
@@ -141,7 +141,7 @@
     inset 0 -2px 6px rgba(0, 0, 0, 0.45);
 }
 
-.immodex-header::after {
+.chh-header::after {
   content: '';
   position: absolute;
   left: 22px;
@@ -154,7 +154,7 @@
   pointer-events: none;
 }
 
-.immodex-title {
+.chh-title {
   font-weight: 900;
   font-size: 14px;
   letter-spacing: 0.22em;
@@ -164,7 +164,7 @@
   flex: 1;
 }
 
-.immodex-close {
+.chh-close {
   background: var(--imx-red-shadow);
   border: 2px solid #1a1a1a;
   color: #fee2e2;
@@ -179,12 +179,12 @@
   box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.4);
 }
 
-.immodex-close:hover {
+.chh-close:hover {
   background: #991b1b;
 }
 
 /* ─── LCD screen (fields + result) ─── */
-.immodex-fields {
+.chh-fields {
   margin: 10px 12px 0;
   padding: 8px 10px;
   background:
@@ -196,14 +196,14 @@
   font-size: 11px;
 }
 
-.immodex-fields-row {
+.chh-fields-row {
   display: flex;
   justify-content: space-between;
   padding: 2px 0;
   color: var(--imx-screen-bright);
 }
 
-.immodex-fields-label {
+.chh-fields-label {
   color: var(--imx-screen-soft);
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -211,7 +211,7 @@
   font-weight: 700;
 }
 
-.immodex-status {
+.chh-status {
   margin: 10px 12px;
   padding: 7px 9px;
   background: rgba(0, 0, 0, 0.45);
@@ -222,7 +222,7 @@
   letter-spacing: 0.06em;
 }
 
-.immodex-error {
+.chh-error {
   margin: 10px 12px;
   padding: 8px 10px;
   background: rgba(127, 29, 29, 0.7);
@@ -234,7 +234,7 @@
 }
 
 /* ─── Date prompt ─── */
-.immodex-date-prompt {
+.chh-date-prompt {
   margin: 10px 12px;
   padding: 10px;
   background: linear-gradient(180deg, var(--imx-screen-bg-1), var(--imx-screen-bg-2));
@@ -243,7 +243,7 @@
   box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5);
 }
 
-.immodex-date-prompt label {
+.chh-date-prompt label {
   display: block;
   font-weight: 700;
   font-size: 10px;
@@ -253,7 +253,7 @@
   margin-bottom: 6px;
 }
 
-.immodex-date-prompt input {
+.chh-date-prompt input {
   width: 100%;
   padding: 7px 9px;
   font-family: inherit;
@@ -267,12 +267,12 @@
   box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.5);
 }
 
-.immodex-date-prompt input:focus {
+.chh-date-prompt input:focus {
   border-color: var(--imx-screen-bright);
   box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.5), 0 0 0 2px rgba(110, 231, 183, 0.3);
 }
 
-.immodex-date-prompt button {
+.chh-date-prompt button {
   margin-top: 8px;
   padding: 8px 14px;
   font-family: inherit;
@@ -288,11 +288,11 @@
   box-shadow: 0 2px 0 #172554, inset 0 1px 0 rgba(255, 255, 255, 0.3);
 }
 
-.immodex-date-prompt button:hover {
+.chh-date-prompt button:hover {
   filter: brightness(1.1);
 }
 
-.immodex-skip-date {
+.chh-skip-date {
   display: inline-block;
   margin-left: 12px;
   font-size: 11px;
@@ -303,7 +303,7 @@
 }
 
 /* ─── Top result panel ─── */
-.immodex-top {
+.chh-top {
   margin: 10px 12px 0;
   padding: 10px 12px;
   background:
@@ -315,20 +315,20 @@
   box-shadow: inset 0 0 12px rgba(0, 0, 0, 0.6);
 }
 
-.immodex-top.immodex-conf-green {
+.chh-top.chh-conf-green {
   border-left-color: var(--imx-led-green);
   box-shadow: inset 0 0 12px rgba(34, 197, 94, 0.25);
 }
-.immodex-top.immodex-conf-yellow {
+.chh-top.chh-conf-yellow {
   border-left-color: var(--imx-led-yellow);
   box-shadow: inset 0 0 12px rgba(250, 204, 21, 0.25);
 }
-.immodex-top.immodex-conf-red {
+.chh-top.chh-conf-red {
   border-left-color: var(--imx-led-red);
   box-shadow: inset 0 0 12px rgba(239, 68, 68, 0.25);
 }
 
-.immodex-address {
+.chh-address {
   font-weight: 800;
   font-size: 13px;
   color: var(--imx-screen-bright);
@@ -336,14 +336,14 @@
   letter-spacing: 0.02em;
 }
 
-.immodex-meta {
+.chh-meta {
   font-size: 11px;
   color: var(--imx-screen-soft);
   margin-bottom: 6px;
   letter-spacing: 0.02em;
 }
 
-.immodex-confidence {
+.chh-confidence {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -354,7 +354,7 @@
   color: var(--imx-screen-text);
 }
 
-.immodex-dot {
+.chh-dot {
   width: 11px;
   height: 11px;
   border-radius: 50%;
@@ -363,17 +363,17 @@
   box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.4);
 }
 
-.immodex-conf-green .immodex-dot {
+.chh-conf-green .chh-dot {
   background: radial-gradient(circle at 30% 30%, #dcfce7, var(--imx-led-green));
   box-shadow: 0 0 6px rgba(34, 197, 94, 0.8);
 }
 
-.immodex-conf-yellow .immodex-dot {
+.chh-conf-yellow .chh-dot {
   background: radial-gradient(circle at 30% 30%, #fef9c3, var(--imx-led-yellow));
   box-shadow: 0 0 6px rgba(250, 204, 21, 0.8);
 }
 
-.immodex-conf-red .immodex-dot {
+.chh-conf-red .chh-dot {
   background: radial-gradient(circle at 30% 30%, #fecaca, var(--imx-led-red));
   box-shadow: 0 0 6px rgba(239, 68, 68, 0.8);
   animation: imx-blink 1.6s infinite;
@@ -384,7 +384,7 @@
   70%, 90% { opacity: 0.35; }
 }
 
-.immodex-links {
+.chh-links {
   margin-top: 8px;
   display: flex;
   flex-wrap: wrap;
@@ -392,19 +392,19 @@
   font-size: 11px;
 }
 
-.immodex-links a {
+.chh-links a {
   color: var(--imx-lens-glow);
   text-decoration: none;
   border-bottom: 1px dotted rgba(147, 197, 253, 0.5);
 }
 
-.immodex-links a:hover {
+.chh-links a:hover {
   color: #fff;
   border-bottom-color: #fff;
 }
 
 /* ─── Alts ─── */
-.immodex-alts {
+.chh-alts {
   margin: 10px 12px 0;
   background: rgba(0, 0, 0, 0.25);
   border: 1px solid var(--imx-red-shadow);
@@ -412,7 +412,7 @@
   padding: 6px 10px;
 }
 
-.immodex-alts summary {
+.chh-alts summary {
   cursor: pointer;
   font-weight: 700;
   font-size: 11px;
@@ -421,29 +421,29 @@
   color: #fecaca;
 }
 
-.immodex-alt-row {
+.chh-alt-row {
   border-top: 1px dashed var(--imx-red-shadow);
   padding: 6px 0;
   font-size: 11px;
   color: var(--imx-screen-text);
 }
 
-.immodex-alt-row:first-of-type {
+.chh-alt-row:first-of-type {
   border-top: none;
 }
 
-.immodex-alt-address {
+.chh-alt-address {
   font-weight: 700;
   color: var(--imx-screen-bright);
 }
 
-.immodex-alt-diffs {
+.chh-alt-diffs {
   color: #fca5a5;
   font-size: 10px;
   margin-top: 2px;
 }
 
-.immodex-parcel-id {
+.chh-parcel-id {
   font-family: ui-monospace, SFMono-Regular, monospace;
   font-size: 10px;
   color: var(--imx-screen-soft);
@@ -452,7 +452,7 @@
 }
 
 /* ─── Empty + footer ─── */
-.immodex-empty {
+.chh-empty {
   margin: 10px 12px;
   padding: 9px 11px;
   background: rgba(0, 0, 0, 0.4);
@@ -463,7 +463,7 @@
   font-size: 11px;
 }
 
-.immodex-footer {
+.chh-footer {
   margin: 10px 12px 12px;
   padding: 6px 10px;
   font-size: 10px;
@@ -477,14 +477,14 @@
   text-transform: uppercase;
 }
 
-.immodex-footer a {
+.chh-footer a {
   color: var(--imx-lens-glow);
   text-decoration: none;
   border-bottom: 1px dotted rgba(147, 197, 253, 0.5);
   cursor: pointer;
 }
 
-.immodex-credit {
+.chh-credit {
   display: inline-flex;
   align-items: center;
   gap: 5px;
@@ -495,11 +495,11 @@
   opacity: 0.85;
 }
 
-.immodex-credit:hover {
+.chh-credit:hover {
   opacity: 1;
 }
 
-.immodex-credit a {
+.chh-credit a {
   color: #fecaca !important;
   text-decoration: none;
   border-bottom: none !important;
@@ -508,14 +508,421 @@
   cursor: pointer;
 }
 
-.immodex-credit a:hover {
+.chh-credit a:hover {
   color: #ffffff !important;
 }
 
-.immodex-credit-tonoid:hover {
-  border-bottom: 1px dotted rgba(255, 255, 255, 0.6) !important;
+.chh-credit svg {
+  flex-shrink: 0;
 }
 
-.immodex-credit svg {
-  flex-shrink: 0;
+/* ─── Copy-address button ─── */
+.chh-copy-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace !important;
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.08em !important;
+  text-transform: uppercase !important;
+  color: var(--imx-screen-bright) !important;
+  background: transparent !important;
+  border: 1px solid var(--imx-screen-frame) !important;
+  border-radius: 4px !important;
+  padding: 2px 7px !important;
+  cursor: pointer !important;
+  margin-top: 4px !important;
+  transition: background 0.15s, color 0.15s !important;
+}
+
+.chh-copy-btn:hover {
+  background: rgba(110, 231, 183, 0.12) !important;
+  color: #fff !important;
+}
+
+.chh-copy-btn.chh-copy-done {
+  color: #4ade80 !important;
+  border-color: #4ade80 !important;
+}
+
+.chh-floating-container {
+  position: fixed !important;
+  bottom: 18px !important;
+  left: 18px !important;
+  z-index: 2147483646 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-start !important;
+  gap: 6px !important;
+  padding: 12px 18px !important;
+  border-radius: 4px !important;
+  background: linear-gradient(135deg, #f97316 0%, #ea6c0a 60%, #d97706 100%) !important;
+  color: #fff !important;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  line-height: 1.3 !important;
+  box-shadow:
+    0 4px 12px rgba(0, 0, 0, 0.22),
+    0 8px 24px rgba(234, 108, 10, 0.32),
+    0 1px 0 rgba(255, 255, 255, 0.15) inset !important;
+  transition: box-shadow 0.2s ease, transform 0.15s ease !important;
+  cursor: default !important;
+  user-select: none !important;
+  max-width: 450px !important;
+  overflow: hidden !important;
+}
+
+.chh-floating-container:hover {
+  box-shadow:
+    0 6px 16px rgba(0, 0, 0, 0.26),
+    0 10px 32px rgba(234, 108, 10, 0.4),
+    0 1px 0 rgba(255, 255, 255, 0.2) inset !important;
+}
+
+/* ─── Structure en lignes ─── */
+.chh-fc-row {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  width: 100% !important;
+  flex-wrap: wrap !important;
+}
+
+.chh-fc-row-bottom {
+  margin-top: 4px !important;
+}
+
+.chh-fc-row-dvf {
+  margin-top: 4px !important;
+}
+
+/* ─── Mode : bouton simple / chargement / adresse ─── */
+.chh-fc-btn {
+  cursor: pointer !important;
+}
+
+.chh-fc-spinner {
+  flex-shrink: 0 !important;
+  width: 12px !important;
+  height: 12px !important;
+  border: 2px solid rgba(255, 255, 255, 0.3) !important;
+  border-top-color: #fff !important;
+  border-radius: 50% !important;
+  animation: imx-fc-spin 0.75s linear infinite !important;
+  display: inline-block !important;
+}
+
+@keyframes imx-fc-spin {
+  to { transform: rotate(360deg); }
+}
+
+.chh-fc-icon {
+  font-size: 14px !important;
+  flex-shrink: 0 !important;
+  line-height: 1 !important;
+}
+
+.chh-fc-address-text {
+  color: #fff !important;
+  font-weight: 400 !important;
+  font-size: 12.5px !important;
+  white-space: normal !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15) !important;
+}
+
+.chh-fc-addr-wrap {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  flex-wrap: nowrap !important;
+}
+
+.chh-fc-maps-pin-link {
+  text-decoration: none !important;
+  cursor: pointer !important;
+  transition: transform 0.15s ease, background-color 0.15s ease !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 3px 5px !important;
+  background: rgba(255, 255, 255, 0.12) !important;
+  border: 1px solid rgba(255, 255, 255, 0.25) !important;
+  border-radius: 4px !important;
+}
+
+.chh-fc-maps-pin-link:hover {
+  transform: scale(1.12) !important;
+  background: rgba(255, 255, 255, 0.25) !important;
+}
+
+.chh-fc-loading-text, .chh-fc-state-text {
+  color: rgba(255, 255, 255, 0.85) !important;
+  font-weight: 500 !important;
+  font-size: 12px !important;
+}
+
+/* ─── CHH Badges & Labels ─── */
+.chh-fc-chh-label {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  padding: 3px 9px !important;
+  background: rgba(0, 0, 0, 0.18) !important;
+  border: 1px solid rgba(255, 255, 255, 0.22) !important;
+  border-radius: 4px !important;
+  color: #fff !important;
+  font-weight: 700 !important;
+  font-size: 11px !important;
+  font-family: inherit !important;
+  text-decoration: none !important;
+  white-space: nowrap !important;
+  flex-shrink: 0 !important;
+}
+
+.chh-fc-chh-icon {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 14px !important;
+  height: 14px !important;
+  border-radius: 50% !important;
+  font-size: 9px !important;
+  font-weight: bold !important;
+  line-height: 1 !important;
+}
+
+.chh-fc-chh-match {
+  background: #22c55e !important; /* Vert pour CHH match */
+  color: #fff !important;
+}
+
+.chh-fc-chh-nomatch, .chh-fc-chh-loading {
+  background: #71717a !important; /* Gris neutre pour non-match et loading */
+  color: #fff !important;
+}
+
+.chh-fc-chh-icon.chh-fc-chh-loading {
+  animation: imx-fc-spin 1.5s linear infinite !important;
+}
+
+.chh-fc-sep {
+  color: rgba(255, 255, 255, 0.4) !important;
+  font-weight: 400 !important;
+  flex-shrink: 0 !important;
+  font-size: 13px !important;
+}
+
+.chh-fc-dvf {
+  color: #fff !important;
+  font-weight: 500 !important;
+  font-size: 12.5px !important;
+  white-space: nowrap !important;
+  flex-shrink: 0 !important;
+  opacity: 0.95 !important;
+}
+
+.chh-fc-find-btn {
+  background: rgba(0, 0, 0, 0.14) !important;
+  border: 1px solid rgba(255, 255, 255, 0.28) !important;
+  border-radius: 4px !important;
+  color: #fff !important;
+  font-size: 11.5px !important;
+  font-weight: 600 !important;
+  padding: 3px 11px !important;
+  cursor: pointer !important;
+  font-family: inherit !important;
+  transition: background 0.15s !important;
+  white-space: nowrap !important;
+  flex-shrink: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  text-decoration: none !important;
+}
+
+.chh-fc-find-btn:hover {
+  background: rgba(0, 0, 0, 0.26) !important;
+  color: #fff !important;
+}
+
+.chh-fc-notion-link {
+  background: none !important;
+  border: none !important;
+  color: #93c5fd !important;
+  text-decoration: underline !important;
+  font-size: 11px !important;
+  font-weight: 500 !important;
+  cursor: pointer !important;
+  transition: color 0.15s !important;
+  padding: 0 !important;
+  margin-left: 6px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+}
+
+.chh-fc-notion-link:hover {
+  color: #fff !important;
+  text-decoration: underline !important;
+}
+
+.chh-fc-notion-save-btn {
+  background: rgba(249, 115, 22, 0.15) !important;
+  border: 1px solid rgba(249, 115, 22, 0.5) !important;
+  color: #fdba74 !important;
+  font-size: 11px !important;
+  font-weight: 500 !important;
+  border-radius: 4px !important;
+  padding: 2px 7px !important;
+  margin-left: 6px !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  font-family: inherit !important;
+}
+
+.chh-fc-notion-save-btn:hover {
+  background: rgba(249, 115, 22, 0.35) !important;
+  color: #fff !important;
+  border-color: #f97316 !important;
+  box-shadow: 0 0 6px rgba(249, 115, 22, 0.4) !important;
+}
+
+.chh-fc-notion-save-btn:disabled {
+  opacity: 0.7 !important;
+  cursor: wait !important;
+}
+
+.chh-fc-dvf-icon-link {
+  text-decoration: none !important;
+  cursor: pointer !important;
+  transition: transform 0.15s ease !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.chh-fc-dvf-icon-link:hover {
+  transform: scale(1.22) !important;
+}
+
+/* ─── Alternatives d'adresse & sous-titres ─── */
+.chh-fc-addr-container {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-start !important;
+  gap: 3px !important;
+  width: 100% !important;
+}
+
+.chh-fc-sub-addr {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  font-size: 11px !important;
+  color: rgba(255, 255, 255, 0.72) !important;
+  margin-top: 1px !important;
+}
+
+.chh-fc-supposition {
+  font-weight: 500 !important;
+}
+
+.chh-fc-sub-sep {
+  color: rgba(255, 255, 255, 0.4) !important;
+}
+
+.chh-fc-alt-btn {
+  background: none !important;
+  border: none !important;
+  color: #93c5fd !important;
+  text-decoration: underline !important;
+  font-size: 11px !important;
+  font-weight: 500 !important;
+  cursor: pointer !important;
+  padding: 0 !important;
+  transition: color 0.15s !important;
+}
+
+.chh-fc-alt-btn:hover {
+  color: #fff !important;
+  text-decoration: underline !important;
+}
+
+.chh-fc-alt-list {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 5px !important;
+  width: 100% !important;
+  margin-top: 6px !important;
+  padding-top: 6px !important;
+  border-top: 1px dashed rgba(255, 255, 255, 0.12) !important;
+}
+
+.chh-fc-alt-row {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  width: 100% !important;
+}
+
+.chh-fc-alt-maps-link {
+  text-decoration: none !important;
+  cursor: pointer !important;
+  font-size: 11px !important;
+  transition: transform 0.15s ease !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.chh-fc-alt-maps-link:hover {
+  transform: scale(1.15) !important;
+}
+
+.chh-fc-alt-text {
+  font-size: 11.5px !important;
+  font-weight: 400 !important;
+  color: rgba(255, 255, 255, 0.85) !important;
+}
+
+.chh-fc-status-aside {
+  font-size: 11px !important;
+  font-weight: 500 !important;
+  color: rgba(255, 255, 255, 0.65) !important;
+  margin-left: 4px !important;
+  white-space: nowrap !important;
+}
+
+.chh-fc-no-address-text {
+  color: rgba(255, 255, 255, 0.55) !important;
+  font-style: italic !important;
+  font-weight: 400 !important;
+}
+
+.chh-fc-no-dvf-text {
+  color: rgba(255, 255, 255, 0.55) !important;
+  font-style: italic !important;
+  font-weight: 400 !important;
+}
+
+.chh-fc-copy-addr {
+  background: none !important;
+  border: none !important;
+  color: #fff !important;
+  opacity: 0.75 !important;
+  font-size: 20px !important;
+  padding: 0 2px !important;
+  cursor: pointer !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: opacity 0.15s, transform 0.1s !important;
+}
+
+.chh-fc-copy-addr:hover {
+  opacity: 1 !important;
+  transform: scale(1.1) !important;
 }

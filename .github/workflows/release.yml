@@ -51,7 +51,7 @@ jobs:
       - name: Build extension zip
         run: |
           mkdir -p dist
-          zip -r dist/immodex-${{ needs.release-please.outputs.version }}.zip \
+          zip -r dist/chh-${{ needs.release-please.outputs.version }}.zip \
             manifest.json LICENSE icons src \
             -x "icons/*.svg" \
             -x "**/.DS_Store" \
@@ -60,7 +60,7 @@ jobs:
 
       - name: Upload to Chrome Web Store
         env:
-          ZIP: dist/immodex-${{ needs.release-please.outputs.version }}.zip
+          ZIP: dist/chh-${{ needs.release-please.outputs.version }}.zip
           CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}
           CLIENT_SECRET: ${{ secrets.CHROME_CLIENT_SECRET }}
           REFRESH_TOKEN: ${{ secrets.CHROME_REFRESH_TOKEN }}
@@ -91,5 +91,5 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release upload "${{ needs.release-please.outputs.tag_name }}" \
-            "dist/immodex-${{ needs.release-please.outputs.version }}.zip" \
+            "dist/chh-${{ needs.release-please.outputs.version }}.zip" \
             --clobber

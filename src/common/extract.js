@@ -49,9 +49,22 @@
   }
 
   function normalizeClass(value) {
-    if (!value) return null;
-    const letter = String(value).trim().toUpperCase().charAt(0);
-    return ENERGY_CLASSES.includes(letter) ? letter : null;
+    if (value == null || value === '') return null;
+    const str = String(value).trim().toUpperCase();
+    const firstChar = str.charAt(0);
+    if (ENERGY_CLASSES.includes(firstChar)) return firstChar;
+
+    const num = parseInt(str.replace(/\D/g, ''), 10);
+    if (isFinite(num) && num > 0) {
+      if (num <= 70) return 'A';
+      if (num <= 110) return 'B';
+      if (num <= 180) return 'C';
+      if (num <= 250) return 'D';
+      if (num <= 330) return 'E';
+      if (num <= 420) return 'F';
+      return 'G';
+    }
+    return null;
   }
 
   function normalizePropertyType(value) {
@@ -203,7 +216,7 @@
     return walk(obj, 0);
   }
 
-  window.__immodexExtract = {
+  window.__chhExtract = {
     normalizePostal,
     normalizeSurface,
     normalizeLandSurface,

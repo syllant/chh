@@ -8,7 +8,7 @@
   "packages": {
     ".": {
       "release-type": "simple",
-      "package-name": "immodex",
+      "package-name": "chh",
       "extra-files": [
         {
           "type": "json",

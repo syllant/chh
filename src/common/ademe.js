@@ -12,6 +12,8 @@ const FIELD_MAP = {
     date: 'date_etablissement_dpe',
     surface: 'surface_habitable_logement',
     postal: 'code_postal_ban',
+    postalBrut: 'code_postal_brut',
+    insee: 'code_insee_ban',
     city: 'nom_commune_ban',
     address: 'adresse_ban',
     energyClass: 'etiquette_dpe',
@@ -26,6 +28,8 @@ const FIELD_MAP = {
     date: 'date_etablissement_dpe',
     surface: 'surface_habitable_logement',
     postal: 'code_postal_ban',
+    postalBrut: 'code_postal_brut',
+    insee: 'code_insee_ban',
     city: 'nom_commune_ban',
     address: 'adresse_ban',
     energyClass: 'etiquette_dpe',
@@ -38,9 +42,11 @@ const FIELD_MAP = {
   legacy: {
     id: 'numero_dpe',
     date: 'date_etablissement_dpe',
-    surface: 'surface_habitable',
-    postal: 'code_postal',
-    city: 'commune',
+    surface: 'surface_thermique_lot',
+    postal: 'code_insee_commune_actualise',
+    postalBrut: 'code_insee_commune_actualise',
+    insee: 'code_insee_commune_actualise',
+    city: 'code_insee_commune_actualise',
     address: 'geo_adresse',
     energyClass: 'classe_consommation_energie',
     gesClass: 'classe_estimation_ges',
@@ -52,7 +58,7 @@ const FIELD_MAP = {
 };
 
 function buildSelect(fields) {
-  return Object.values(fields).join(',');
+  return Array.from(new Set(Object.values(fields))).join(',');
 }
 
 function buildAdemeUrl({ dataset, filters, size = 20, sort }) {

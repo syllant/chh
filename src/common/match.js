@@ -17,37 +17,83 @@ function widenDateRange(range, days) {
   };
 }
 
-function buildFilters(payload, dataset, tier) {
+function getAdjacentClasses(letter) {
+  if (!letter) return [];
+  const list = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
+  const idx = list.indexOf(String(letter).toUpperCase());
+  if (idx === -1) return [];
+  const res = [];
+  if (idx > 0) res.push(list[idx - 1]);
+  if (idx < list.length - 1) res.push(list[idx + 1]);
+  return res;
+}
+
+function buildFilters(payload, dataset, tier, inseeCodes = []) {
   const filters = { eq: [], gte: [], lte: [], in: [] };
   const isLegacy = dataset === DATASETS.legacy;
   const f = {
-    postal: isLegacy ? 'code_postal' : 'code_postal_ban',
-    surface: isLegacy ? 'surface_habitable' : 'surface_habitable_logement',
+    insee: isLegacy ? 'code_insee_commune_actualise' : 'code_insee_ban',
+    postal: isLegacy ? 'code_insee_commune_actualise' : 'code_postal_ban',
+    postalBrut: isLegacy ? 'code_insee_commune_actualise' : 'code_postal_brut',
+    surface: isLegacy ? 'surface_thermique_lot' : 'surface_habitable_logement',
     energy: isLegacy ? 'classe_consommation_energie' : 'etiquette_dpe',
     ges: isLegacy ? 'classe_estimation_ges' : 'etiquette_ges',
     date: 'date_etablissement_dpe',
     building: isLegacy ? 'tr002_type_batiment_description' : 'type_batiment',
   };
 
-  if (payload.postal) filters.eq.push([f.postal, payload.postal]);
+  // Location filter: prefer INSEE code, fallback to postal
+  if (inseeCodes && inseeCodes.length > 0) {
+    if (inseeCodes.length === 1) {
+      filters.eq.push([f.insee, inseeCodes[0]]);
+    } else {
+      filters.in.push([f.insee, inseeCodes.join(',')]);
+    }
+  } else if (payload.postal) {
+    if (isLegacy) {
+      filters.eq.push([f.insee, payload.postal]);
+    } else {
+      if (tier >= 3) {
+        filters.in.push([f.postal, payload.postal]);
+      } else {
+        filters.eq.push([f.postal, payload.postal]);
+      }
+    }
+  }
 
-  let surfaceTolerance = 1;
-  if (tier >= 3) surfaceTolerance = 3;
+  // Surface tolerance by Tier
+  let surfaceTolerance = 2;
+  if (tier === 2) surfaceTolerance = 3;
+  if (tier === 3) surfaceTolerance = 5;
+  if (tier === 4) surfaceTolerance = 8;
+  if (tier >= 5) surfaceTolerance = Math.max(10, Math.round((payload.surface || 50) * 0.1));
+
   if (payload.surface) {
-    filters.gte.push([f.surface, payload.surface - surfaceTolerance]);
-    filters.lte.push([f.surface, payload.surface + surfaceTolerance]);
+    const minSurf = Math.max(1, payload.surface - surfaceTolerance);
+    const maxSurf = payload.surface + surfaceTolerance;
+    filters.gte.push([f.surface, minSurf]);
+    filters.lte.push([f.surface, maxSurf]);
+  }
+
+  // Energy & GES classes filtering by Tier
+  if (payload.energyClass) {
+    if (tier <= 4) {
+      filters.eq.push([f.energy, payload.energyClass]);
+    }
   }
 
   const noDate = !payload.dateRange;
-  const energyMaxTier = noDate ? 3 : 3;
   const gesMaxTier = noDate ? 1 : 2;
-  if (payload.energyClass && tier <= energyMaxTier) filters.eq.push([f.energy, payload.energyClass]);
-  if (payload.gesClass && tier <= gesMaxTier) filters.eq.push([f.ges, payload.gesClass]);
+  if (payload.gesClass && tier <= gesMaxTier) {
+    filters.eq.push([f.ges, payload.gesClass]);
+  }
 
+  // Date range filtering by Tier
   let dateRange = payload.dateRange;
-  if (dateRange) {
+  if (dateRange && tier <= 4) {
     if (tier === 2) dateRange = widenDateRange(dateRange, 7);
-    if (tier >= 3) dateRange = widenDateRange(dateRange, 30);
+    if (tier === 3) dateRange = widenDateRange(dateRange, 30);
+    if (tier === 4) dateRange = widenDateRange(dateRange, 60);
     filters.gte.push([f.date, dateRange.gte]);
     filters.lte.push([f.date, dateRange.lte]);
   }
@@ -63,13 +109,22 @@ function scoreRecord(record, payload) {
   if (payload.surface != null && record.surface != null) {
     const diff = Math.abs(record.surface - payload.surface);
     if (diff === 0) {
-      score += 30;
+      score += 35;
       reasons.push('surface exacte');
     } else if (diff <= 1) {
-      score += 22;
-      reasons.push('surface ±1');
+      score += 30;
+      reasons.push('surface ±1 m²');
+    } else if (diff <= 2) {
+      score += 26;
+      reasons.push('surface ±2 m²');
     } else if (diff <= 3) {
-      score += 10;
+      score += 20;
+      reasons.push('surface ±3 m²');
+    } else if (diff <= 5) {
+      score += 12;
+      diffs.push(`surface ${record.surface} vs ${payload.surface}`);
+    } else if (diff <= 8) {
+      score += 5;
       diffs.push(`surface ${record.surface} vs ${payload.surface}`);
     } else {
       diffs.push(`surface ${record.surface} vs ${payload.surface}`);
@@ -79,41 +134,68 @@ function scoreRecord(record, payload) {
   if (payload.dateRange && record.date) {
     const recordIso = String(record.date).slice(0, 10);
     if (recordIso >= payload.dateRange.gte && recordIso <= payload.dateRange.lte) {
-      score += 30;
+      score += 25;
       reasons.push('date dans la fenêtre');
     } else {
       const target = new Date(payload.dateRange.gte + 'T00:00:00Z').getTime();
       const got = new Date(recordIso + 'T00:00:00Z').getTime();
       const days = Math.abs(target - got) / (1000 * 60 * 60 * 24);
-      if (days <= 7) score += 18;
-      else if (days <= 30) score += 8;
+      if (days <= 7) {
+        score += 18;
+        reasons.push('date ±7j');
+      } else if (days <= 30) {
+        score += 10;
+        reasons.push('date ±30j');
+      } else if (days <= 90) {
+        score += 5;
+        reasons.push('date ±90j');
+      }
       diffs.push(`date ${recordIso} vs ${payload.dateRange.gte}…${payload.dateRange.lte}`);
     }
   }
 
   if (payload.energyClass && record.energyClass) {
-    if (record.energyClass === payload.energyClass) {
-      score += 15;
-      reasons.push(`classe ${record.energyClass}`);
+    const recEnergy = String(record.energyClass).toUpperCase();
+    const payEnergy = String(payload.energyClass).toUpperCase();
+    if (recEnergy === payEnergy) {
+      score += 20;
+      reasons.push(`classe ${recEnergy}`);
+    } else if (getAdjacentClasses(payEnergy).includes(recEnergy)) {
+      score += 8;
+      reasons.push(`classe proche ${recEnergy}`);
+      diffs.push(`classe ${recEnergy} vs ${payEnergy}`);
     } else {
-      diffs.push(`classe ${record.energyClass} vs ${payload.energyClass}`);
+      diffs.push(`classe ${recEnergy} vs ${payEnergy}`);
     }
   }
 
   if (payload.gesClass && record.gesClass) {
-    if (record.gesClass === payload.gesClass) {
-      score += 15;
-      reasons.push(`GES ${record.gesClass}`);
+    const recGes = String(record.gesClass).toUpperCase();
+    const payGes = String(payload.gesClass).toUpperCase();
+    if (recGes === payGes) {
+      score += 12;
+      reasons.push(`GES ${recGes}`);
+    } else if (getAdjacentClasses(payGes).includes(recGes)) {
+      score += 4;
+      diffs.push(`GES ${recGes} vs ${payGes}`);
     } else {
-      diffs.push(`GES ${record.gesClass} vs ${payload.gesClass}`);
+      diffs.push(`GES ${recGes} vs ${payGes}`);
     }
   }
 
   if (payload.buildingType && record.buildingType) {
     const recordType = String(record.buildingType).toLowerCase();
-    if (recordType.includes(payload.buildingType)) {
-      score += 10;
+    const targetType = String(payload.buildingType).toLowerCase();
+    if (recordType.includes(targetType) || targetType.includes(recordType)) {
+      score += 8;
       reasons.push(payload.buildingType);
+    }
+  }
+
+  if (payload.postal && record.postal) {
+    if (String(record.postal).trim() === String(payload.postal).trim()) {
+      score += 15;
+      reasons.push('code postal exact');
     }
   }
 
@@ -133,6 +215,18 @@ function pickDataset(payload) {
 async function runLookup(payload) {
   const primaryDataset = pickDataset(payload);
   const tried = [];
+
+  // Resolve INSEE codes for postal code & city
+  let inseeCodes = [];
+  if (payload.postal) {
+    try {
+      const insees = await resolveInseeCodes(payload.postal, payload.city);
+      inseeCodes = insees.map((i) => i.code);
+    } catch (e) {
+      // ignore
+    }
+  }
+
   const datasetsToTry = [primaryDataset];
   if (primaryDataset !== DATASETS.legacy) datasetsToTry.push(DATASETS.legacy);
   if (primaryDataset !== DATASETS.existing && !datasetsToTry.includes(DATASETS.existing)) {
@@ -144,10 +238,10 @@ async function runLookup(payload) {
   let usedTier = 1;
 
   for (const dataset of datasetsToTry) {
-    for (let tier = 1; tier <= 3; tier++) {
-      const filters = buildFilters(payload, dataset, tier);
+    for (let tier = 1; tier <= 5; tier++) {
+      const filters = buildFilters(payload, dataset, tier, inseeCodes);
       try {
-        const result = await queryAdeme({ dataset, filters, size: 20 });
+        const result = await queryAdeme({ dataset, filters, size: 30 });
         tried.push({ dataset, tier, total: result.total, url: result.url });
         if (result.records.length > 0) {
           usedDataset = dataset;
@@ -168,7 +262,7 @@ async function runLookup(payload) {
       candidates: [],
       tried,
       dataset: primaryDataset,
-      tier: 3,
+      tier: 5,
       highConfidence: false,
     };
   }
@@ -180,7 +274,7 @@ async function runLookup(payload) {
   const top = scored[0];
   const second = scored[1];
   const margin = second ? top.score - second.score : top.score;
-  const highConfidence = top.score >= 80 && margin >= 20;
+  const highConfidence = top.score >= 75 && margin >= 15;
 
   return {
     ok: true,

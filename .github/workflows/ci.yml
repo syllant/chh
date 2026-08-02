@@ -37,7 +37,7 @@ jobs:
       - name: Smoke-build extension zip
         run: |
           mkdir -p dist
-          zip -r dist/immodex.zip manifest.json LICENSE icons src \
+          zip -r dist/chh.zip manifest.json LICENSE icons src \
             -x "icons/*.svg" \
             -x "**/.DS_Store"
           ls -la dist/
@@ -45,8 +45,8 @@ jobs:
       - name: Upload zip artifact
         uses: actions/upload-artifact@v4
         with:
-          name: immodex-${{ github.sha }}
-          path: dist/immodex.zip
+          name: chh-${{ github.sha }}
+          path: dist/chh.zip
           retention-days: 7
 
   commitlint:

@@ -1,4 +1,4 @@
-# Releasing Immodex
+# Releasing CHH
 
 The release pipeline is fully automated. On every push to `main`:
 
@@ -71,12 +71,12 @@ If you ever need to ship without going through release-please:
 git tag v0.2.0 && git push --tags
 
 # Zip locally
-zip -r immodex.zip manifest.json LICENSE icons src \
+zip -r chh.zip manifest.json LICENSE icons src \
   -x "icons/*.svg" -x "**/.DS_Store"
 
 # Upload via the CLI (uses your local creds — install with `npm i -g chrome-webstore-upload-cli`)
 chrome-webstore-upload upload \
-  --source immodex.zip \
+  --source chh.zip \
   --extension-id "$CHROME_EXTENSION_ID" \
   --client-id "$CHROME_CLIENT_ID" \
   --client-secret "$CHROME_CLIENT_SECRET" \

@@ -1,18 +1,13 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
-  <defs>
-    <radialGradient id="lens" cx="0.35" cy="0.32" r="0.75">
-      <stop offset="0" stop-color="#ffffff"/>
-      <stop offset="0.25" stop-color="#bfdbfe"/>
-      <stop offset="0.55" stop-color="#3b82f6"/>
-      <stop offset="1" stop-color="#1e3a8a"/>
-    </radialGradient>
-  </defs>
-  <!-- chunky chassis (solid) -->
-  <rect x="6" y="6" width="116" height="116" rx="24" fill="#c1272d" stroke="#450a0a" stroke-width="8"/>
-  <!-- dominant lens -->
-  <circle cx="64" cy="60" r="40" fill="#1e3a8a" stroke="#ffffff" stroke-width="8"/>
-  <circle cx="64" cy="60" r="32" fill="url(#lens)"/>
-  <ellipse cx="52" cy="48" rx="10" ry="5" fill="#ffffff" opacity="0.9"/>
-  <!-- green LED corner -->
-  <circle cx="102" cy="22" r="8" fill="#22c55e" stroke="#450a0a" stroke-width="3"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <!-- Solid Orange Rounded square background -->
+  <rect x="8" y="8" width="112" height="112" rx="28" fill="#f97316"/>
+  
+  <!-- Chimney -->
+  <path d="M 44,38 L 44,48 L 54,48 L 54,38 Z" fill="#ffffff"/>
+  
+  <!-- House + Cutout Window (using evenodd fill rule) -->
+  <path d="M 32,60 L 64,32 L 96,60 L 88,60 L 88,96 L 40,96 L 40,60 Z M 64,82 C 72.28,82 79,75.28 79,67 C 79,58.72 72.28,52 64,52 C 55.72,52 49,58.72 49,67 C 49,75.28 55.72,82 64,82 Z" fill="#ffffff" fill-rule="evenodd"/>
+  
+  <!-- Magnifying Glass Handle -->
+  <path d="M 75,78 L 92,95" stroke="#ffffff" stroke-width="8" stroke-linecap="round"/>
 </svg>

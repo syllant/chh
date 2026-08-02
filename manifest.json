@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Immodex",
+  "name": "CHH (Charsyka Home Hunting)",
   "version": "0.1.0",
-  "description": "Trouve l'adresse réelle d'une annonce immobilière (Leboncoin, Bienici, SeLoger) via le registre ADEME des DPE et le cadastre IGN.",
+  "description": "Trouve l'adresse réelle d'une annonce immobilière (Leboncoin, Bienici, SeLoger, Jinka, Figaro, Castorus, MoteurImmo) via le registre ADEME et IGN.",
   "icons": {
     "16": "icons/16.png",
     "32": "icons/32.png",
@@ -10,7 +10,7 @@
     "128": "icons/128.png"
   },
   "action": {
-    "default_title": "Immodex",
+    "default_title": "CHH (Charsyka Home Hunting)",
     "default_popup": "src/popup/popup.html",
     "default_icon": {
       "16": "icons/16.png",
@@ -19,13 +19,28 @@
       "128": "icons/128.png"
     }
   },
-  "permissions": ["storage"],
+  "permissions": [
+    "storage",
+    "alarms",
+    "identity"
+  ],
   "host_permissions": [
     "https://data.ademe.fr/*",
     "https://apicarto.ign.fr/*",
     "https://geo.api.gouv.fr/*",
-    "https://api-adresse.data.gouv.fr/*"
+    "https://api-adresse.data.gouv.fr/*",
+    "https://api.notion.com/*",
+    "https://www.googleapis.com/*",
+    "https://data.geopf.fr/*",
+    "https://dvf-api.data.gouv.fr/*",
+    "https://immobilier.pappers.fr/*"
   ],
+  "oauth2": {
+    "client_id": "1095698160519-iv6ralot6m3cnbj6p1tsun9m3878dmgm.apps.googleusercontent.com",
+    "scopes": [
+      "https://www.googleapis.com/auth/calendar.events"
+    ]
+  },
   "background": {
     "service_worker": "src/background/service-worker.js",
     "type": "module"
@@ -36,14 +51,17 @@
         "https://www.leboncoin.fr/ad/*",
         "https://www.leboncoin.fr/vi/*",
         "https://www.leboncoin.fr/locations/*",
-        "https://www.leboncoin.fr/ventes_immobilieres/*"
+        "https://www.leboncoin.fr/ventes_immobilieres/*",
+        "https://www.leboncoin.fr/recherche*"
       ],
       "js": [
         "src/common/extract.js",
         "src/ui/overlay.js",
         "src/content/leboncoin.js"
       ],
-      "css": ["src/ui/overlay.css"],
+      "css": [
+        "src/ui/overlay.css"
+      ],
       "run_at": "document_idle"
     },
     {
@@ -56,30 +74,136 @@
         "src/ui/overlay.js",
         "src/content/bienici.js"
       ],
-      "css": ["src/ui/overlay.css"],
+      "css": [
+        "src/ui/overlay.css"
+      ],
       "run_at": "document_idle"
     },
     {
       "matches": [
-        "https://www.seloger.com/annonces/*",
-        "https://www.seloger.com/*.htm"
+        "https://www.seloger.com/*"
       ],
       "js": [
         "src/common/extract.js",
         "src/ui/overlay.js",
         "src/content/seloger.js"
       ],
-      "css": ["src/ui/overlay.css"],
+      "css": [
+        "src/ui/overlay.css"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://www.jinka.fr/*"
+      ],
+      "js": [
+        "src/common/extract.js",
+        "src/ui/overlay.js",
+        "src/content/jinka.js"
+      ],
+      "css": [
+        "src/ui/overlay.css"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://www.bellesdemeures.com/*"
+      ],
+      "js": [
+        "src/common/extract.js",
+        "src/ui/overlay.js",
+        "src/content/bellesdemeures.js"
+      ],
+      "css": [
+        "src/ui/overlay.css"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://www.paruvendu.fr/*"
+      ],
+      "js": [
+        "src/common/extract.js",
+        "src/ui/overlay.js",
+        "src/content/paruvendu.js"
+      ],
+      "css": [
+        "src/ui/overlay.css"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://proprietes.lefigaro.fr/*",
+        "https://www.proprietes.lefigaro.fr/*",
+        "https://immobilier.lefigaro.fr/*",
+        "https://www.immobilier.lefigaro.fr/*"
+      ],
+      "js": [
+        "src/common/extract.js",
+        "src/ui/overlay.js",
+        "src/content/figaro.js"
+      ],
+      "css": [
+        "src/ui/overlay.css"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://www.castorus.com/*",
+        "https://castorus.com/*"
+      ],
+      "js": [
+        "src/common/extract.js",
+        "src/ui/overlay.js",
+        "src/content/castorus.js"
+      ],
+      "css": [
+        "src/ui/overlay.css"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://moteurimmo.fr/*",
+        "https://www.moteurimmo.fr/*"
+      ],
+      "js": [
+        "src/common/extract.js",
+        "src/ui/overlay.js",
+        "src/content/moteurimmo.js"
+      ],
+      "css": [
+        "src/ui/overlay.css"
+      ],
       "run_at": "document_idle"
     }
   ],
   "web_accessible_resources": [
     {
-      "resources": ["src/ui/overlay.css"],
+      "resources": [
+        "src/ui/overlay.css"
+      ],
       "matches": [
         "https://www.leboncoin.fr/*",
         "https://www.bienici.com/*",
-        "https://www.seloger.com/*"
+        "https://bienici.com/*",
+        "https://www.seloger.com/*",
+        "https://www.jinka.fr/*",
+        "https://www.bellesdemeures.com/*",
+        "https://www.paruvendu.fr/*",
+        "https://proprietes.lefigaro.fr/*",
+        "https://www.proprietes.lefigaro.fr/*",
+        "https://immobilier.lefigaro.fr/*",
+        "https://www.immobilier.lefigaro.fr/*",
+        "https://www.castorus.com/*",
+        "https://castorus.com/*",
+        "https://moteurimmo.fr/*",
+        "https://www.moteurimmo.fr/*"
       ]
     }
   ]
