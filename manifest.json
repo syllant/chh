@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "CHH (Charsyka Home Hunting)",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Trouve l'adresse réelle d'une annonce immobilière (Leboncoin, Bienici, SeLoger, Jinka, Figaro, Castorus, MoteurImmo) via le registre ADEME et IGN.",
   "icons": {
     "16": "icons/16.png",
