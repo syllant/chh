@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <title>CHH</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body class="chh-body">
+    <header class="chh-header">
+      <div class="chh-logo-area">
+        <img class="chh-icon" src="/icons/32.png" alt="Icon CHH" />
+        <div class="chh-header-text">
+          <h1>CHH</h1>
+          <p class="subtitle">Charsyka Home Hunting</p>
+        </div>
+      </div>
+      <button type="button" id="open-tab-btn" title="Ouvrir dans un onglet" aria-label="Ouvrir dans un onglet">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+          <path d="M19 19H5V5h7V3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14c1.1 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/>
+        </svg>
+      </button>
+    </header>
+
+    <nav class="chh-tabs" role="tablist">
+      <button type="button" id="tab-search" class="tab-btn active" role="tab" aria-selected="true" aria-controls="panel-search">Recherche</button>
+      <button type="button" id="tab-calendar" class="tab-btn" role="tab" aria-selected="false" aria-controls="panel-calendar">Calendrier</button>
+      <button type="button" id="tab-config" class="tab-btn" role="tab" aria-selected="false" aria-controls="panel-config">Configuration</button>
+    </nav>
+
+    <main class="chh-main">
+      <!-- PANEL RECHERCHE -->
+      <div id="panel-search" class="tab-panel" role="tabpanel" aria-labelledby="tab-search">
+        <div class="mode-toggle" role="tablist">
+          <button type="button" id="mode-dpe" class="mode-btn active" role="tab">DPE</button>
+          <button type="button" id="mode-land" class="mode-btn" role="tab">TERRAIN</button>
+        </div>
+
+        <form id="dpe-form" autocomplete="off">
+          <div class="row">
+            <label>Code postal
+              <input type="text" name="postal" maxlength="5" inputmode="numeric" required />
+            </label>
+            <label>Surface (m²)
+              <input type="number" name="surface" min="1" max="2000" required />
+            </label>
+          </div>
+          <div class="row">
+            <label>Classe énergie
+              <select name="energyClass">
+                <option value="">—</option>
+                <option>A</option><option>B</option><option>C</option><option>D</option>
+                <option>E</option><option>F</option><option>G</option>
+              </select>
+            </label>
+            <label>Classe GES
+              <select name="gesClass">
+                <option value="">—</option>
+                <option>A</option><option>B</option><option>C</option><option>D</option>
+                <option>E</option><option>F</option><option>G</option>
+              </select>
+            </label>
+          </div>
+          <div class="row">
+            <label>Type
+              <select name="buildingType">
+                <option value="">—</option>
+                <option value="appartement">Appartement</option>
+                <option value="maison">Maison</option>
+              </select>
+            </label>
+            <label>Date DPE
+              <input type="text" name="date" placeholder="JJ/MM/AAAA, MM/AAAA, AAAA" />
+            </label>
+          </div>
+          <button type="submit" id="dpe-submit" class="chh-btn primary">RECHERCHER</button>
+        </form>
+
+        <form id="land-form" class="hidden" autocomplete="off">
+          <div class="row">
+            <label>Code postal
+              <input type="text" name="postal" maxlength="5" inputmode="numeric" required />
+            </label>
+            <label>Surface terrain (m²)
+              <input type="number" name="surface" min="1" max="999999" required />
+            </label>
+          </div>
+          <div class="row">
+            <label>Ville (facultatif)
+              <input type="text" name="city" />
+            </label>
+            <label>Section (facultatif)
+              <input type="text" name="section" maxlength="2" />
+            </label>
+          </div>
+          <button type="submit" id="land-submit" class="chh-btn primary">RECHERCHER</button>
+        </form>
+
+        <section id="status" class="status hidden"></section>
+        <section id="results"></section>
+      </div>
+
+      <!-- PANEL CALENDRIER -->
+      <div id="panel-calendar" class="tab-panel hidden" role="tabpanel" aria-labelledby="tab-calendar">
+        <div class="settings-content">
+          <h2 class="section-title">Synchro Google Calendar</h2>
+          
+          <label class="setting-label">
+            <input type="checkbox" id="gcal-active" /> Activer la synchronisation
+          </label>
+
+          <div id="gcal-sync-status-bar" class="gcal-status-bar hidden">
+            <span id="gcal-status-icon" class="gcal-status-icon"></span>
+            <span id="gcal-status-text" class="gcal-status-text"></span>
+            <button type="button" id="gcal-sync-now-btn" class="gcal-sync-now-btn" title="Synchroniser maintenant">
+              <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor" aria-hidden="true">
+                <path d="M17.65 6.35A7.958 7.958 0 0 0 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
+              </svg>
+              Forcer
+            </button>
+          </div>
+
+          <div class="gcal-connect-row">
+            <button type="button" id="gcal-connect-btn" class="gcal-connect-btn">
+              <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor" aria-hidden="true">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/>
+              </svg>
+              <span id="gcal-connect-label">Se connecter à Google</span>
+            </button>
+            <span id="gcal-connect-status" class="gcal-connect-status"></span>
+          </div>
+
+          <label>ID du calendrier cible
+            <input type="text" id="gcal-calendar-id" placeholder="xyz@group.calendar.google.com" />
+          </label>
+
+          <div class="settings-actions">
+            <button type="button" id="gcal-save-btn" class="chh-btn primary-action">Sauver</button>
+          </div>
+          <div id="gcal-settings-status" class="status-msg hidden"></div>
+
+          <p class="gcal-help">
+            💡 Cliquez "Se connecter" pour autoriser l'accès à votre Google Calendar.
+            Chrome gère les tokens automatiquement — aucune configuration supplémentaire.
+          </p>
+        </div>
+      </div>
+
+      <!-- PANEL CONFIGURATION -->
+      <div id="panel-config" class="tab-panel hidden" role="tabpanel" aria-labelledby="tab-config">
+        <div class="settings-content">
+          <h2 class="section-title">Configuration Notion</h2>
+          
+          <label class="setting-label">
+            <input type="checkbox" id="notion-active" /> Activer l'intégration
+          </label>
+          <label>Jeton Notion (Token API)
+            <input type="password" id="notion-token" placeholder="secret_..." />
+          </label>
+          <label>ID de la base de données
+            <input type="text" id="notion-db-id" placeholder="8b12f..." />
+          </label>
+          
+          <details class="mapping-details">
+            <summary>Colonnes personnalisées</summary>
+            <div class="mapping-content">
+              <label>Prix
+                <input type="text" id="notion-prop-price" value="Prix" />
+              </label>
+              <label>Prix précédents
+                <input type="text" id="notion-prop-prev-prices" value="Prix précédents" />
+              </label>
+              <label>Surface
+                <input type="text" id="notion-prop-surface" value="Surface" />
+              </label>
+              <label>Terrain
+                <input type="text" id="notion-prop-terrain" value="Terrain" />
+              </label>
+              <label>Pièces
+                <input type="text" id="notion-prop-rooms" value="Pièces" />
+              </label>
+              <label>Chambres
+                <input type="text" id="notion-prop-bedrooms" value="Chambres" />
+              </label>
+              <label>Autre surface
+                <input type="text" id="notion-prop-other-surfaces" value="Autre surface" />
+              </label>
+              <label>Code postal
+                <input type="text" id="notion-prop-postal" value="Code postal" />
+              </label>
+              <label>Ville
+                <input type="text" id="notion-prop-city" value="Ville" />
+              </label>
+              <label>Adresse
+                <input type="text" id="notion-prop-address" value="Adresse" />
+              </label>
+              <label>Dernière vente
+                <input type="text" id="notion-prop-last-sale" value="Dernière vente" />
+                <span class="field-hint">Champ texte "prix|date" — auto-rempli depuis DVF</span>
+              </label>
+              <label>Portal URL
+                <input type="text" id="notion-prop-url" value="Portal URL" />
+              </label>
+              <label>Statut
+                <input type="text" id="notion-prop-status" value="Statut" />
+              </label>
+              <label>Description
+                <input type="text" id="notion-prop-description" value="Description" />
+              </label>
+              <label>Ajouté le
+                <input type="text" id="notion-prop-added-at" value="Ajouté le" />
+              </label>
+              <label>Site / Source
+                <input type="text" id="notion-prop-site" value="Site" />
+              </label>
+            </div>
+          </details>
+
+          <h2 class="section-title" style="margin-top: 16px;">Filtres de recherche</h2>
+          <label>Termes exclus (masquage d'annonces)
+            <input type="text" id="excluded-terms" placeholder="Courtarelles, Courtarelle, Estanove, Aiguelongue..." />
+            <span class="field-hint">Termes séparés par des virgules (ex: Courtarelles, Courtarelle, Estanove, Aiguelongue, Seigneurs, Domaine des Oliviers, Jacou, Clapiers, Caylus, Celleneuve, Védas)</span>
+          </label>
+          
+          <div class="settings-actions">
+            <button type="button" id="notion-save-btn" class="chh-btn primary-action">Sauver</button>
+            <button type="button" id="notion-clear-cache-btn" class="chh-btn secondary-action">Vider le cache</button>
+          </div>
+          <div id="notion-settings-status" class="status-msg hidden"></div>
+        </div>
+      </div>
+    </main>
+
+
+    <script src="popup.js"></script>
+  </body>
+</html>
